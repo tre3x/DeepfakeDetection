@@ -22,6 +22,7 @@ cv2.ocl.setUseOpenCL(False)
 cv2.setNumThreads(0)
 import numpy as np
 
+
 from tensorboardX import SummaryWriter
 
 
@@ -33,6 +34,32 @@ from tqdm import tqdm
 import torch.distributed as dist
 
 torch.backends.cudnn.benchmark = True
+
+
+def create_train_transforms(size=300):
+    return Compose([
+        ImageCompression(quality_lower=60, quality_upper=100, p=0.5),
+        GaussNoise(p=0.1),
+        GaussianBlur(blur_limit=3, p=0.05),
+        HorizontalFlip(),
+        OneOf([
+            IsotropicResize(max_side=size, interpolation_down=cv2.INTER_AREA, interpolation_up=cv2.INTER_CUBIC),
+            IsotropicResize(max_side=size, interpolation_down=cv2.INTER_AREA, interpolation_up=cv2.INTER_LINEAR),
+            IsotropicResize(max_side=size, interpolation_down=cv2.INTER_LINEAR, interpolation_up=cv2.INTER_LINEAR),
+        ], p=1),
+        PadIfNeeded(min_height=size, min_width=size, border_mode=cv2.BORDER_CONSTANT),
+        OneOf([RandomBrightnessContrast(), FancyPCA(), HueSaturationValue()], p=0.7),
+        ToGray(p=0.2),
+        ShiftScaleRotate(shift_limit=0.1, scale_limit=0.2, rotate_limit=10, border_mode=cv2.BORDER_CONSTANT, p=0.5),
+    ]
+    )
+
+
+def create_val_transforms(size=300):
+    return Compose([
+        IsotropicResize(max_side=size, interpolation_down=cv2.INTER_AREA, interpolation_up=cv2.INTER_CUBIC),
+        PadIfNeeded(min_height=size, min_width=size, border_mode=cv2.BORDER_CONSTANT),
+    ])
 
 
 def main():
@@ -121,7 +148,6 @@ def main():
         start_epoch = 0
     current_epoch = start_epoch
 
-
     snapshot_name = "{}{}_{}_{}".format(conf.get("prefix", args.prefix), conf['network'], conf['encoder'], args.fold)
 
     if args.distributed:
@@ -209,6 +235,7 @@ def validate(net, conf, data_loader, prefix=""):
     with torch.no_grad():
         for sample in tqdm(data_loader):
             imgs = sample["image"].cuda()
+            imgs = sample["image"]
             img_names = sample["img_name"] #image
             #eye = sample["eye"].cuda()#eye 0524
             #video_names = sample["video_name"] #video
@@ -270,6 +297,8 @@ def train_epoch(current_epoch, loss_functions, model, optimizer, scheduler, trai
         imgs = sample["image"].cuda()
         labels = sample["labels"].cuda().float()
         #eye = sample["eye"].cuda().float() # eye 0524
+        imgs = imgs.permute(0, 3, 2, 1).float() 
+        print(imgs.shape)
         if conf['network'] == 'DeepFakeClassifier_Distill':
             student_logits, distill_logits, teacher_logits = model(imgs) #distill 0524 eye
         else:

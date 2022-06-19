@@ -5,14 +5,12 @@ import time
 
 import torch
 import pandas as pd
-from kernel_utils import VideoReader, FaceExtractor, confident_strategy, predict_on_video_set
 from training.zoo.classifiers import DeepFakeClassifier, DeepFakeClassifier_Distill, DeepFakeClassifier_Video_Distill
 from facenet_pytorch.models.mtcnn import MTCNN
 import glob
 import cv2
 import numpy as np
 from PIL import Image
-from kernel_utils import isotropically_resize_image, put_to_center, normalize_transform
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Predict test videos")
@@ -28,9 +26,9 @@ if __name__ == '__main__':
     model_paths = [os.path.join(args.weights_dir, model) for model in args.models]
     for path in model_paths:
         if args.distill == True:
-            model = DeepFakeClassifier_Distill(encoder="deit_distill_large_patch32_384").to("cuda")
+            model = DeepFakeClassifier_Distill(encoder="deit_distill_large_patch32_384")
         else:
-            model = DeepFakeClassifier(encoder="tf_efficientnet_b7_ns").to("cuda")
+            model = DeepFakeClassifier(encoder="tf_efficientnet_b7_ns")
         print("loading state dict {}".format(path))
         checkpoint = torch.load(path, map_location="cpu")
         state_dict = checkpoint.get("state_dict", checkpoint)
@@ -44,11 +42,11 @@ if __name__ == '__main__':
     #image detect
     #model
     predictions =[]
-    paths = [file for file in glob.glob(args.test_dir+'/*.png')]
+    paths = [file for file in glob.glob(args.test_dir+'/*.jpg')]
     print("Predicting {} images".format(len(paths)))
     #images = [cv2.imread(file) for file in glob.glob(args.test_dir+'/*.png')]
-    detector = MTCNN(margin=0, thresholds=[0.7, 0.8, 0.8], device="cuda")
-    input_size = 384
+    #detector = MTCNN(margin=0, thresholds=[0.7, 0.8, 0.8], device="cuda")
+    input_size = 299
     strategy = confident_strategy
     stime = time.time()
 
@@ -56,6 +54,7 @@ if __name__ == '__main__':
         frame = cv2.imread(path)
         h, w = frame.shape[:2]
         img = Image.fromarray(frame.astype(np.uint8))
+        '''
         img = img.resize(size=[s // 2 for s in img.size])
         batch_boxes, probs = detector.detect(img, landmarks=False)
         faces = []
@@ -72,6 +71,7 @@ if __name__ == '__main__':
                 crop = frame[max(ymin - p_h, 0):ymax + p_h, max(xmin - p_w, 0):xmax + p_w]
                 faces.append(crop)
                 scores.append(score)
+        
 
         if len(faces) > 0 :
             x = np.zeros((1, input_size, input_size, 3), dtype=np.uint8)
@@ -83,22 +83,22 @@ if __name__ == '__main__':
 
                 x[n] = resized_face
                 n += 1
-        if n>0:
-            x = torch.tensor(x, device="cuda").float()
-            x = x.permute((0,3,1,2))
-            for i in range(len(x)):
-                x[i] = normalize_transform(x[i]/255.)
-            with torch.no_grad():
-                preds = []
-                for model in models:
-                    if args.distill:
-                        _, y_pred, _ = model(x[:n].half())
-                    else:
-                        y_pred = model(x[:n].half())
-                    y_pred = torch.sigmoid(y_pred.squeeze())
-                    bpred = y_pred.cpu().numpy()
-                    preds.append(bpred)
-                predictions.append(np.mean(preds))
+        '''
+        x = torch.tensor(img, device="cuda").float()
+        x = x.permute((0,3,1,2))
+
+        img = normalize_transform(img/255.)
+        with torch.no_grad():
+            preds = []
+            for model in models:
+                if args.distill:
+                    _, y_pred, _ = model(img.half())
+                else:
+                    y_pred = model(x[:n].half())
+                y_pred = torch.sigmoid(y_pred.squeeze())
+                bpred = y_pred.cpu().numpy()
+                preds.append(bpred)
+            predictions.append(np.mean(preds))
 
 
     submission_df = pd.DataFrame({"filename": paths, "label": predictions})

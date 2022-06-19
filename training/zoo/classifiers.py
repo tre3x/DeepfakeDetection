@@ -464,7 +464,7 @@ class DeepFakeClassifier_Distill(nn.Module):
         self.encoder = encoder_params[encoder]["init_op"]()
         #'''0524
         self.teacher = DeepFakeClassifier(encoder="tf_efficientnet_b7_ns").to("cuda")
-        checkpoint = torch.load('/home/yjheo/Deepfake/dfdc_deepfake_challenge/weights/final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36', map_location='cpu')
+        checkpoint = torch.load('/home/tre3x/python/DeepfakeDetection/weights/final_777_DeepFakeClassifier_tf_efficientnet_b7_ns_0_31', map_location='cpu')
         state_dict = checkpoint.get("state_dict", checkpoint)
         self.teacher.load_state_dict({re.sub("^module.", "", k): v for k, v in state_dict.items()}, strict=False)
         #'''

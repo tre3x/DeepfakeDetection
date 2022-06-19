@@ -55,7 +55,8 @@ class DeepFakeClassifierDataset(Dataset):
                     label = np.clip(label, self.label_smoothing, 1 - self.label_smoothing)
                 #img_path = os.path.join(self.data_root, self.crops_dir, video, img_file)
                 image = cv2.imread(img_path, cv2.IMREAD_COLOR)
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                image = cv2.resize(image, (600, 600))
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) 
 
                 return {"image": image,
                         "labels": np.array((label,))} # "origin_image": origin_image, "mask":part_mask,
@@ -79,11 +80,6 @@ class DeepFakeClassifierDataset(Dataset):
         seed = (epoch + 1) * seed
         if self.oversample_real:
             rows = self._oversample(rows, seed)
-        if self.mode == "val" and self.reduce_val:
-            # every 2nd frame, to speed up validation
-            rows = rows[rows["frame"] % 20 == 0]
-            # another option is to use public validation set
-            #rows = rows[rows["video"].isin(PUBLIC_SET)]
 
         print(
             "real {} fakes {} mode {}".format(len(rows[rows["label"] == 0]), len(rows[rows["label"] == 1]), self.mode))

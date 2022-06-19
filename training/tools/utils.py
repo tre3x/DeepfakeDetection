@@ -1,5 +1,4 @@
 import cv2
-from apex.optimizers import FusedAdam, FusedSGD
 from timm.optim import AdamW
 from torch import optim
 from torch.optim import lr_scheduler
@@ -75,20 +74,10 @@ def create_optimizer(optimizer_config, model, master_params=None):
                               momentum=optimizer_config["momentum"],
                               weight_decay=optimizer_config["weight_decay"],
                               nesterov=optimizer_config["nesterov"])
-    elif optimizer_config["type"] == "FusedSGD":
-        optimizer = FusedSGD(params,
-                             lr=optimizer_config["learning_rate"],
-                             momentum=optimizer_config["momentum"],
-                             weight_decay=optimizer_config["weight_decay"],
-                             nesterov=optimizer_config["nesterov"])
     elif optimizer_config["type"] == "Adam":
         optimizer = optim.Adam(params,
                                lr=optimizer_config["learning_rate"],
                                weight_decay=optimizer_config["weight_decay"])
-    elif optimizer_config["type"] == "FusedAdam":
-        optimizer = FusedAdam(params,
-                              lr=optimizer_config["learning_rate"],
-                              weight_decay=optimizer_config["weight_decay"])
     elif optimizer_config["type"] == "AdamW":
         optimizer = AdamW(params,
                                lr=optimizer_config["learning_rate"],
