@@ -127,25 +127,9 @@ def main():
     start_epoch = 0
     batch_size = conf['optimizer']['batch_size']
 
-    data_train = DeepFakeClassifierDataset(mode="train",
-                                           oversample_real=not args.no_oversample,
-                                           fold=args.fold,
-                                           padding_part=args.padding_part,
-                                           hardcore=not args.no_hardcore,
-                                           crops_dir=args.crops_dir,
-                                           data_path=args.data_dir,
-                                           label_smoothing=args.label_smoothing,
-                                           folds_csv=args.folds_csv,
-                                           transforms=create_train_transforms(conf["size"]),
-                                           normalize=conf.get("normalize", None))
-    data_val = DeepFakeClassifierDataset(mode="val",
-                                         fold=args.fold,
-                                         padding_part=args.padding_part,
-                                         crops_dir=args.crops_dir,
-                                         data_path=args.data_dir,
-                                         folds_csv=args.folds_csv,
-                                         transforms=create_val_transforms(conf["size"]),
-                                         normalize=conf.get("normalize", None))
+    data_train = DeepFakeClassifierDataset(mode='train', folds_csv="./folds.csv")
+    data_val = DeepFakeClassifierDataset(mode='val', folds_csv="./folds.csv")
+    
     val_data_loader = DataLoader(data_val, batch_size=batch_size, num_workers=args.workers, shuffle=False,
                                  pin_memory=False) #batch_size = bathc_size*2
     os.makedirs(args.logdir, exist_ok=True)
